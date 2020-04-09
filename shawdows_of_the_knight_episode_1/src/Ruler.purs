@@ -3,7 +3,6 @@ module Range
     , Pos(..)
     , Range(..)
     , range
-    , fromPos
 ) where
 
 import Prelude
@@ -15,8 +14,11 @@ data Area = Area Range Range
 instance showPos :: Show Pos where
   show (Pos x y) = show x <> " " <> show y
 
-fromPos :: Pos -> Range
-fromPos (Pos x y) = range x y
+instance showRange :: Show Range where
+  show (Range x y) = show x <> "-" <> show y
+
+instance showArea :: Show Area where
+  show (Area r1 r2) = show r1 <> " / " <> show r2
 
 data Range = Range Int Int
 

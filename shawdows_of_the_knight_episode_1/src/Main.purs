@@ -8,12 +8,13 @@ import Data.Maybe (fromMaybe)
 import Effect (Effect)
 import Effect.Console (error, log)
 import Math as M
-import Range (Range(..), Area(..), Pos(..), range, fromPos)
+import Range (Range(..), Area(..), Pos(..), range)
 import Reader (GameInput, parseInput, readline)
 
 main :: Effect Unit
 main = do
     input <- parseInput
+    error $ show input
     loop input (calcArea input)
 
 calcArea :: GameInput -> Area
@@ -28,7 +29,9 @@ loop input area = do
 
     let pos = Pos input.x input.y
 
-    let area' = shrinkArea dir area (fromPos pos)
+    let area' = shrinkArea dir area pos
+    error $ show area
+    error $ show area'
     let (Pos x y) = getMiddlePos area'
     let input' = input { x = x, y = y }
 
@@ -37,20 +40,20 @@ loop input area = do
     loop input' area'
 
     where
-        shrinkArea :: String -> Area -> Range -> Area
-        shrinkArea "U"  a (Range x y) = Area (Range x x) (yUp a y)
-        shrinkArea "D"  a (Range x y) = Area (Range x x) (yDown a y)
-        shrinkArea "R"  a (Range x y) = Area (xRight a x) (Range y y)
-        shrinkArea "L"  a (Range x y) = Area (xLeft a x) (Range y y)
-        shrinkArea "UR" a (Range x y) = Area (xRight a x) (yUp a y)
-        shrinkArea "DR" a (Range x y) = Area (xRight a x) (yDown a y)
-        shrinkArea "DL" a (Range x y) = Area (xLeft a x) (yDown a y)
-        shrinkArea "UL" a (Range x y) = Area (xLeft a x) (yUp a y)
-        shrinkArea  _   _     _     = Area (Range 9999 9999) (Range 9999 9999)
-        xRight (Area (Range x1 x2) _) x = Range (x+1) (input.width-1)
-        xLeft  (Area (Range x1 x2) _) x = Range (x-1) 0
-        yUp (Area _ (Range y1 y2)) y = Range (y-1) 0
-        yDown (Area _ (Range y1 y2)) y = Range (y+1) (input.height-1)
+        shrinkArea :: String -> Area -> Pos -> Area
+        shrinkArea "U"  a (Pos x y) = Area (range x x) (yUp a y)
+        shrinkArea "D"  a (Pos x y) = Area (range x x) (yDown a y)
+        shrinkArea "R"  a (Pos x y) = Area (xRight a x) (range y y)
+        shrinkArea "L"  a (Pos x y) = Area (xLeft a x) (range y y)
+        shrinkArea "UR" a (Pos x y) = Area (xRight a x) (yUp a y)
+        shrinkArea "DR" a (Pos x y) = Area (xRight a x) (yDown a y)
+        shrinkArea "DL" a (Pos x y) = Area (xLeft a x) (yDown a y)
+        shrinkArea "UL" a (Pos x y) = Area (xLeft a x) (yUp a y)
+        shrinkArea  _   _     _     = Area (range 9999 9999) (range 9999 9999)
+        xRight (Area (Range xL xR) _) x = range (x+1) xR
+        xLeft  (Area (Range xL xR) _) x = range xL (x-1)
+        yUp (Area _ (Range yU yL)) y = range yU (y-1)
+        yDown (Area _ (Range yU yL)) y = range (y+1) yL
 
 maxPos :: Pos -> Int
 maxPos (Pos x y) = max x y
@@ -63,29 +66,6 @@ getMiddlePos (Area (Range x1 x2) (Range y1 y2)) = Pos x y
     where
         x = abs (x1 + x2) / 2
         y = abs (y1 + y2) / 2
---        minX = min \(Pos x y) -> x
---        minY = min \(Pos x y) -> y
---        maxX = max \(Pos x y) -> x
---        maxY = max \(Pos x y) -> y
 
 abs :: Int -> Int
 abs x = fromMaybe (-1) $ fromNumber $ M.abs $ toNumber x
-
--- nextMove :: Building -> Pos -> Array Pos -> Pos
--- nextMove building pos bombDirs =
---     fromMaybe (Pos 100 100) $ head $ sortBy comparePos validPos
---   where comparePos :: Pos -> Pos -> Ordering
---         comparePos p1 p2 = compare (posVal p2) (posVal p1)
---         validPos :: Array Pos
---         validPos = filter (posValid building) possiblePos
---         possiblePos = map (addPos pos) bombDirs
--- 
--- posValid :: Building -> Pos -> Boolean
--- posValid (Building w h) (Pos x y) = x <= w && y <= h
--- 
--- posVal :: Pos -> Int
--- posVal (Pos x y) = fromMaybe 0 $ fromNumber $ absNum x + absNum y
---     where absNum = abs <<< toNumber
--- 
--- addPos :: Pos -> Pos -> Pos
--- addPos (Pos x1 y1) (Pos x2 y2) = Pos (x1+x2) (y1+y2)
