@@ -1,0 +1,27 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build_purescript",
+            "type": "shell",
+            "command": "spago bundle-app",
+            "presentation": {
+                "echo": true,
+                "focus": true,
+                "reveal": "silent"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build_purescript_old",
+            "type": "shell",
+            "command": "spago bundle-app && sed -i \"$ d\" index.js && uglifyjs index.js --compress --mangle --output index.js",
+            "group": "build"
+        }
+    ]
+}
