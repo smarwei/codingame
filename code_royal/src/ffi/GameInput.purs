@@ -23,7 +23,9 @@ type SiteInfo =
 
 type ProtoSite = 
     { id :: Int
-    , structureType :: Int  -- -1 No structure, 2 Barracks
+    , gold :: Int  -- The total number of gold remaining to be mined from this site (-1 if unknown)
+    , maxMineSize :: Int  -- The maximum rate that a mine can extract gold from this site (-1 if unknown)
+    , structureType :: Int  -- -1 No structure, 0 Goldmine, 1 Tower, 2 Barracks
     , owner :: Int  -- -1 No structure, 0 friendly, 1 enemy
     , param1 :: Int  -- -1 No structure, else turns till training
     , param2 :: Int  -- -1 No structure, barracks: 0 knight 1 archer
@@ -34,6 +36,8 @@ type Site =
     , x :: Int
     , y :: Int
     , radius :: Int
+    , gold :: Int
+    , maxMineSize :: Int
     , structureType :: Int
     , owner :: Int
     , param1 :: Int

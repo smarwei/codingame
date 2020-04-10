@@ -32,14 +32,16 @@ exports.parseInput = function(numSites) {
         for (let i = 0; i < numSites; i++) {
             var inputs = readline().split(' ');
             var siteId = parseInt(inputs[0]);
-            var ignore1 = parseInt(inputs[1]); // used in future leagues
-            var ignore2 = parseInt(inputs[2]); // used in future leagues
+            var mineGold = parseInt(inputs[1]); // The total number of gold remaining to be mined from this site (-1 if unknown)
+            var maxMineSize = parseInt(inputs[2]); // The maximum rate that a mine can extract gold from this site (-1 if unknown)
             var structureType = parseInt(inputs[3]); // -1 = No structure, 2 = Barracks
             var owner = parseInt(inputs[4]); // -1 = No structure, 0 = Friendly, 1 = Enemy
             var param1 = parseInt(inputs[5]);
             var param2 = parseInt(inputs[6]);
             sites.push({
                 id: siteId,
+                gold: mineGold,
+                maxMineSize,
                 structureType,
                 owner,
                 param1,
