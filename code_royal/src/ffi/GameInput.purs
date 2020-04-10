@@ -10,7 +10,7 @@ type GameInitInput =
 type GameInput =
     { gold :: Int
     , touchedSite :: Int -- -1 if none
-    , sites :: Array Site
+    , sites :: Array ProtoSite
     , units :: Array Minion
     }
 
@@ -21,12 +21,23 @@ type SiteInfo =
     , radius :: Int
     }
 
-type Site = 
+type ProtoSite = 
     { id :: Int
     , structureType :: Int  -- -1 No structure, 2 Barracks
     , owner :: Int  -- -1 No structure, 0 friendly, 1 enemy
     , param1 :: Int  -- -1 No structure, else turns till training
     , param2 :: Int  -- -1 No structure, barracks: 0 knight 1 archer
+    }
+
+type Site =
+    { id :: Int
+    , x :: Int
+    , y :: Int
+    , radius :: Int
+    , structureType :: Int
+    , owner :: Int
+    , param1 :: Int
+    , param2 :: Int
     }
 
 type Minion =

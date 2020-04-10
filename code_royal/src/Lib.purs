@@ -3,8 +3,9 @@ module Lib where
 import Prelude
 
 import Data.Int (fromNumber, pow, toNumber)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust)
 import Math as M
+import Partial.Unsafe (unsafePartial)
 import Range (Area(..), Pos(..), Range(..))
 
 maxPos :: Pos -> Int
@@ -20,10 +21,10 @@ getMiddlePos (Area (Range x1 x2) (Range y1 y2)) = Pos x y
         y = abs (y1 + y2) / 2
 
 abs :: Int -> Int
-abs x = fromMaybe 0 $ fromNumber $ M.abs $ toNumber x
+abs x = unsafePartial $ fromJust $ fromNumber $ M.abs $ toNumber x
 
 sqrt :: Int -> Int
-sqrt x = fromMaybe 0 $ fromNumber $ M.sqrt $ toNumber x
+sqrt x = unsafePartial $ fromJust $ fromNumber $ M.floor $ M.sqrt $ toNumber x
 
 dist :: forall a b. { x :: Int, y :: Int | a } -> { x :: Int, y :: Int | b } -> Int
 dist p1 p2 = sqrt $ a2 + b2

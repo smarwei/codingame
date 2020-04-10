@@ -15,12 +15,13 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "problemMatcher": []
         },
         {
             "label": "build_purescript_old",
             "type": "shell",
-            "command": "spago bundle-app && sed -i \"$ d\" index.js && uglifyjs index.js --compress --mangle --output index.js",
+            "command": "spago bundle-app && uglifyjs index.js --compress --mangle --output index.js",
             "group": "build"
         }
     ]
