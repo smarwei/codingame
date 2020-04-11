@@ -41,7 +41,7 @@ type Site =
     , structureType :: Int  -- -1 No structure, 0 Goldmine, 1 Tower, 2 Barracks
     , owner :: Int  -- -1 No structure, 0 friendly, 1 enemy
     , param1 :: Int  -- -1 No structure, else turns till training
-    , param2 :: Int  -- -1 No structure, barracks: 0 knight 1 archer
+    , param2 :: Int  -- -1 No structure, barracks: 0 knight 1 archer 2 giant
     , mineLvl :: Int -- -1 whatever, otherwise curr. mine lvl
     }
 
@@ -49,7 +49,7 @@ type Minion =
     { x :: Int
     , y :: Int
     , owner :: Int -- 0 = Friendly; 1 = Enemy
-    , unitType :: Int -- -1 = QUEEN, 0 = KNIGHT, 1 = ARCHER
+    , unitType :: Int -- -1 = QUEEN, 0 = KNIGHT, 1 = ARCHER, 2 = GIANT
     , health :: Int
     }
 

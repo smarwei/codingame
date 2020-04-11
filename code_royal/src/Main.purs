@@ -1,11 +1,13 @@
 module Main where
 
+-- mines only on side
+-- build giants
+
 import Prelude
 
-import Control.Monad.State (State, gets, runState)
+import Control.Monad.State (State, gets, modify_, runState)
 import Control.MonadZero (guard)
 import Data.Array (any, filter, foldl, head, length, sortBy)
--- import Data.JSDate (now, getTime)
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Tuple (fst, snd)
 import Effect (Effect)
@@ -17,7 +19,7 @@ import Partial.Unsafe (unsafePartial)
 type GameState = 
     { gold :: Int
     , numSites :: Int
-    , touchedSite :: Maybe Int
+    , touchedSite :: Int
     , sites :: Array Site
     , units :: Array Minion
     , leftSide :: Boolean
@@ -29,44 +31,43 @@ main = do
     error $ show initInput
     loop initInput.numSites initInput.sites Nothing
 
-loop :: Int -> Array SiteInfo -> Maybe Boolean -> Effect Unit
-loop numSites siteInfo leftSide = do
+loop :: Int -> Array SiteInfo -> Maybe GameState -> Effect Unit
+loop numSites siteInfo gameState = do
     input <- parseInput numSites
 
     -- do we start on the left side of the map?
-    let leftSide' = case leftSide of
-            Just ls -> ls
+    let leftSide' = case gameState of
+            Just gs -> gs.leftSide
             Nothing -> (queen input.units).x < 500
     
-    let touchedSite = if input.touchedSite == -1
-        then Nothing
-        else Just input.touchedSite
-    
-    let gameState =
+    let gameState' =
             { gold: input.gold
             , numSites
-            , touchedSite
+            , touchedSite: input.touchedSite
             , sites: combinedSites input.sites
             , units: input.units
             , leftSide: leftSide'
             }
 
-    let res = runState loop' gameState
+    let res = runState loop' gameState'
     let state = snd res
     let val = fst res
     log $ val
-    loop state.numSites (toSiteInfo <$> state.sites) (Just state.leftSide)
+    loop state.numSites (toSiteInfo <$> state.sites) (Just state)
     
     where
-        -- queenPos :: Array Minion -> { x :: Int, y :: Int }
-        -- queenPos minions = queen minions
-
-        -- combine sites with siteInfo
+        -- combine sites with siteInfo and old state
         combinedSites :: Array ProtoSite -> Array Site
         combinedSites sites = do
             protoS <- sites
             infoS <- siteInfo
             guard $ protoS.id == infoS.id
+            let prevSite = case gameState of
+                    Just gs -> head $ filter (\s -> s.id == infoS.id) gs.sites
+                    Nothing -> Nothing
+            let mineLvl = case prevSite of
+                    Just site -> site.mineLvl
+                    Nothing -> 0
             pure { id: protoS.id
                  , gold: protoS.gold
                  , maxMineSize: protoS.maxMineSize
@@ -77,7 +78,7 @@ loop numSites siteInfo leftSide = do
                  , x: infoS.x
                  , y: infoS.y
                  , radius: infoS.radius
-                 , mineLvl: -1
+                 , mineLvl
                  }
 
 loop' :: State GameState String
@@ -90,18 +91,20 @@ buildAll :: State GameState String
 buildAll = do
     sites <- gets _.sites
     units <- gets _.units
-    if (length $ friendlySites sites) == 0
-        then buildTowers
-    else if (length $ friendlyMines sites) < 3
+    let buildingsCnt = length $ friendlySites sites
+    let minesCnt = length $ friendlyMines sites
+    if minesCnt < 3
         then buildMines
-    else if (length $ friendlySites sites) > 5 && (length $ friendlySites sites) < 11
-        then buildTowers
-    else if (length $ friendlySites sites) <= 5
+    else if buildingsCnt < 6
         then case head $ nearFreeSites (queen units) sites of
             Just site -> do
-                let typ = if hasKnightsBarrack sites then 1 else 0
+                let typ = if not $ hasArcherBarrack sites then 1
+                          else if not $ hasKnightsBarrack sites then 0
+                          else 2
                 pure $ build site typ
             Nothing -> avoid
+    else if buildingsCnt < 9
+        then buildTowers
     else avoid
 
 buildTowers :: State GameState String
@@ -117,9 +120,18 @@ buildMines = do
     units <- gets _.units
     sites <- gets _.sites
     case head $ nearNonEmptyMines (queen units) sites of
-        Just site ->
+        Just site -> do
+            touched <- gets _.touchedSite
+            if touched == -1 || touched /= site.id
+                then pure unit
+                else modify_ (\s -> s { sites = map (incMineLvl site.id) s.sites })
             pure $ "BUILD " <> show site.id <> " MINE"
         Nothing -> avoid
+    where
+        incMineLvl :: Int -> Site -> Site
+        incMineLvl sId site
+            | sId == site.id = site { mineLvl = site.mineLvl + 1 }
+            | otherwise = site
 
 avoid :: State GameState String
 avoid = do
@@ -129,24 +141,30 @@ avoid = do
         Just enemy -> do
             let site = unsafePartial $ fromJust $ head $
                     sortBy (\s1 s2 -> compare (dist enemy s2) (dist enemy s1)) (friendlySites sites)
-            pure $ "MOVE " <> show site.x <> " " <> show site.y
+            pure $ moveToPos site
         Nothing -> pure $ "MOVE 0 0"
 
 -- nearest non-queen enemy
 nearestEnemy :: State GameState (Maybe Minion)
 nearestEnemy = do
     units <- gets _.units
-    pure $ head $ filter (\u -> u.unitType /= -1 && isEnemy u) units
+    pure $ head $ filter (\u -> isEnemy u) units
 
 trainAll :: State GameState String
 trainAll = do
     gold <- gets _.gold
     sites <- gets _.sites
+    units <- gets _.units
 
-    -- choose <- randomInt 1 100
-    let choose = -1   -- TODO!!!
-    let barrack = if gold > 140
-        then if choose < 42 then knightBarrack sites else archerBarrack sites
+    let ownArchers = ownMinions units
+    let barrack =if gold > 140
+        then
+            if length ownArchers < 4 && length (enemyKnights units) /= 0
+                then archerBarrack sites
+            else if length (enemyTowers sites) > 2
+                then giantBarrack sites
+            else
+                knightBarrack sites
         else []
     pure $ foldl siteToIds "TRAIN" barrack
     where
@@ -157,12 +175,27 @@ trainAll = do
         archerBarrack sites = case head $ archerBarracks sites of
             Just barrack -> [barrack]
             Nothing -> []
+        giantBarrack sites = case head $ giantBarracks sites of
+            Just barrack -> [barrack]
+            Nothing -> []
+
+build :: forall e. { id :: Int | e } -> Int -> String
+build s typ = "BUILD " <> show s.id <> " BARRACKS-" <> t
+    where t | typ == 0 = "KNIGHT"
+            | typ == 1 = "ARCHER"
+            | otherwise = "GIANT"
 
 queen :: Array Minion -> Minion
 queen units = unsafePartial $ fromJust $ head $ filter (\u -> u.unitType == -1 && u.owner == 0) units
 
 enemyQueen :: Array Minion -> Minion
 enemyQueen units = unsafePartial $ fromJust $ head $ filter (\u -> u.unitType == -1 && u.owner == 1) units
+
+ownMinions :: Array Minion -> Array Minion
+ownMinions = filter isOwn
+
+enemyKnights :: Array Minion -> Array Minion
+enemyKnights = filter isEnemy <<< filter isKnight
 
 freeSites :: Array Site -> Array Site
 freeSites = filter (\s -> s.owner == -1)
@@ -173,23 +206,35 @@ friendlySites = filter (\s -> s.owner == 0)
 friendlyMines :: Array Site -> Array Site
 friendlyMines sites = filter (\s -> s.structureType == 0) $ friendlySites sites
 
+enemyTowers :: Array Site -> Array Site
+enemyTowers = filter isEnemy <<< filter isTower
+
 nearSites :: forall a. { x :: Int, y :: Int | a } -> Array Site -> Array Site
-nearSites unit sites = sortBy (compareSiteDist unit) sites
+nearSites minion sites = sortBy (compareSiteDist minion) sites
 
 nearFreeSites :: forall a. { x :: Int, y :: Int | a } -> Array Site -> Array Site
-nearFreeSites unit sites = sortBy (compareSiteDist unit) (freeSites sites)
+nearFreeSites minion sites = sortBy (compareSiteDist minion) (freeSites sites)
 
 nearNonEmptyMines :: forall x. { x :: Int, y :: Int | x } -> Array Site -> Array Site
-nearNonEmptyMines unit sites = filter (\s -> s.gold > 0 && s.mineLvl < 5 && s.owner /= 1) $ nearSites unit sites
+nearNonEmptyMines minion sites = filter (\s -> s.gold > 20 && s.mineLvl < 5 && s.owner /= 1) $ nearSites minion sites
 
 hasKnightsBarrack :: Array Site -> Boolean
 hasKnightsBarrack sites = any (\s -> s.param2 == 0) (friendlySites sites)
+
+hasArcherBarrack :: Array Site -> Boolean
+hasArcherBarrack sites = any (\s -> s.param2 == 1) (friendlySites sites)
+
+hasGiantsBarrack :: Array Site -> Boolean
+hasGiantsBarrack sites = any (\s -> s.param2 == 2) (friendlySites sites)
 
 knightBarracks :: Array Site -> Array Site
 knightBarracks sites = filter (\s -> s.param2 == 0) (friendlySites sites)
 
 archerBarracks :: Array Site -> Array Site
 archerBarracks sites = filter (\s -> s.param2 == 1) (friendlySites sites)
+
+giantBarracks :: Array Site -> Array Site
+giantBarracks sites = filter (\s -> s.param2 == 2) (friendlySites sites)
 
 toSiteInfo :: Site -> SiteInfo
 toSiteInfo s = { id: s.id, x: s.x, y: s.y, radius: s.radius }
@@ -200,10 +245,6 @@ compareSiteDist u s1 s2 = compare (dist s1 u) (dist s2 u)
 corner :: Boolean -> { x :: Int, y :: Int }
 corner leftSide = if leftSide then { x: 0, y: 0 } else { x: 1920, y: 1000 }
 
-build :: forall e. { id :: Int | e } -> Int -> String
-build s typ = "BUILD " <> show s.id <> " BARRACKS-" <> t
-    where t = if typ == 0 then "KNIGHT" else "ARCHER"
-
 isOwn :: forall a. { owner :: Int | a } -> Boolean
 isOwn = owner 0
 
@@ -212,6 +253,18 @@ isEnemy = owner 1
 
 owner :: Int -> forall a. { owner :: Int | a } -> Boolean
 owner oId r = r.owner == oId
+
+isKnight :: Minion -> Boolean
+isKnight minion = minion.unitType == 0
+
+isArcher :: Minion -> Boolean
+isArcher minion = minion.unitType == 1
+
+isGiant :: Minion -> Boolean
+isGiant minion = minion.unitType == 2
+
+isTower :: forall a. { structureType :: Int | a } -> Boolean
+isTower s = s.structureType == 1
 
 barracks :: Array Site -> Array Site
 barracks sites = filter (\b -> b.structureType == 2) sites
