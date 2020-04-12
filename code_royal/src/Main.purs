@@ -242,7 +242,7 @@ nearFreeSites :: forall a. { x :: Int, y :: Int | a } -> Array Site -> Array Sit
 nearFreeSites minion sites = sortBy (compareSiteDist minion) (freeSites sites)
 
 nearNonEmptyMines :: forall x. { x :: Int, y :: Int | x } -> Array Site -> Array Site
-nearNonEmptyMines minion sites = filter (\s -> s.gold > 20 && s.lvl < 5 && s.owner /= 1) $ nearSites minion sites
+nearNonEmptyMines minion sites = filter (\s -> (s.gold > 20 || s.gold == -1) && s.lvl < 5 && s.owner /= 1) $ nearSites minion sites
 
 hasKnightsBarrack :: Array Site -> Boolean
 hasKnightsBarrack sites = any (\s -> s.param2 == 0) (friendlySites sites)
