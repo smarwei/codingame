@@ -9,7 +9,7 @@ import Prelude
 
 import Control.Monad.State (State, gets, modify_, runState)
 import Control.MonadZero (guard)
-import Data.Array (any, filter, foldl, head, length, sortBy)
+import Data.Array (any, filter, foldl, head, length, reverse, sortBy)
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Tuple (fst, snd)
 import Effect (Effect)
@@ -99,7 +99,7 @@ buildAll = do
     let minesCnt = length $ friendlyMines sites
     if minesCnt < 3
         then buildMines
-    else if buildingsCnt < 6
+    else if buildingsCnt < 5
         then case head $ nearFreeSites (queen units) sites of
             Just site -> do
                 let typ = if not $ hasArcherBarrack sites then 1
@@ -107,22 +107,24 @@ buildAll = do
                           else 2
                 pure $ build site typ
             Nothing -> refreshTowers
-    else if buildingsCnt < 9
+    else if buildingsCnt < 8
         then buildTowers
     else refreshTowers
 
 buildTowers :: State GameState String
 buildTowers = do
     leftSide <- gets _.leftSide
+    units <- gets _.units
     sites <- gets _.sites
-    case head $ nearFreeSites (corner leftSide) sites of
+    case head $ nearFreeSites (queen units) sites of
         Just site -> pure $ "BUILD " <> show site.id <> " TOWER"
         Nothing -> refreshTowers
 
 refreshTowers :: State GameState String
 refreshTowers = do
-    sites <- gets _.sites
-    case head $ friendlyTowersByLvl sites of
+    towers <-friendlyTowersByAttraction
+
+    case head towers of
         Just site -> do
             touched <- gets _.touchedSite
             if touched == -1 || touched /= site.id
@@ -237,6 +239,16 @@ friendlyTowers = filter isOwn <<< filter isTower
 friendlyTowersByLvl :: Array Site -> Array Site
 friendlyTowersByLvl sites = sortBy (\s1 s2 -> compare s1.lvl s2.lvl) (friendlyTowers sites)
 
+-- TODO: Queen should use state -> easier
+-- less distant towers and towers with less hp are preferred
+friendlyTowersByAttraction :: State GameState (Array Site)
+friendlyTowersByAttraction = do
+    sites <- gets _.sites
+    units <- gets _.units
+    let q = queen units
+    pure $ reverse $ sortBy (\t1 t2 -> compare (attraction t1 q) (attraction t2 q)) (friendlyTowers sites)
+    where attraction t q = t.param1 - dist t q
+
 nearSites :: forall a. { x :: Int, y :: Int | a } -> Array Site -> Array Site
 nearSites minion sites = sortBy (compareSiteDist minion) sites
 
@@ -244,7 +256,7 @@ nearFreeSites :: forall a. { x :: Int, y :: Int | a } -> Array Site -> Array Sit
 nearFreeSites minion sites = sortBy (compareSiteDist minion) (freeSites sites)
 
 nearNonEmptyMines :: forall x. { x :: Int, y :: Int | x } -> Array Site -> Array Site
-nearNonEmptyMines minion sites = filter (\s -> (s.gold > 20 || s.gold == -1) && s.lvl < 5 && s.owner /= 1) $ nearSites minion sites
+nearNonEmptyMines minion sites = filter (\s -> (s.gold > 20 || s.gold == -1) && s.lvl < 3 && s.owner /= 1) $ nearSites minion sites
 
 hasKnightsBarrack :: Array Site -> Boolean
 hasKnightsBarrack sites = any (\s -> s.param2 == 0) (friendlySites sites)
