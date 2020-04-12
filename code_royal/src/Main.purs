@@ -2,6 +2,8 @@ module Main where
 
 -- mines only on side
 -- build giants
+-- Pattern match filed wei keine eigenes gebaeude
+-- aber warum nur 2 minen und dann stopp?
 
 import Prelude
 
@@ -28,12 +30,12 @@ type GameState =
 main :: Effect Unit
 main = do
     initInput <- parseInitInput
-    error $ show initInput
     loop initInput.numSites initInput.sites Nothing
 
 loop :: Int -> Array SiteInfo -> Maybe GameState -> Effect Unit
 loop numSites siteInfo gameState = do
     input <- parseInput numSites
+    error $ show input
 
     -- do we start on the left side of the map?
     let leftSide' = case gameState of
@@ -65,8 +67,8 @@ loop numSites siteInfo gameState = do
             let prevSite = case gameState of
                     Just gs -> head $ filter (\s -> s.id == infoS.id) gs.sites
                     Nothing -> Nothing
-            let mineLvl = case prevSite of
-                    Just site -> site.mineLvl
+            let lvl = case prevSite of
+                    Just site -> site.lvl
                     Nothing -> 0
             pure { id: protoS.id
                  , gold: protoS.gold
@@ -78,7 +80,7 @@ loop numSites siteInfo gameState = do
                  , x: infoS.x
                  , y: infoS.y
                  , radius: infoS.radius
-                 , mineLvl
+                 , lvl
                  }
 
 loop' :: State GameState String
@@ -102,10 +104,10 @@ buildAll = do
                           else if not $ hasKnightsBarrack sites then 0
                           else 2
                 pure $ build site typ
-            Nothing -> avoid
+            Nothing -> refreshTowers
     else if buildingsCnt < 9
         then buildTowers
-    else avoid
+    else refreshTowers
 
 buildTowers :: State GameState String
 buildTowers = do
@@ -113,7 +115,25 @@ buildTowers = do
     sites <- gets _.sites
     case head $ nearFreeSites (corner leftSide) sites of
         Just site -> pure $ "BUILD " <> show site.id <> " TOWER"
+        Nothing -> refreshTowers
+
+refreshTowers :: State GameState String
+refreshTowers = do
+    sites <- gets _.sites
+    case head $ friendlyTowersByLvl sites of
+        Just site -> do
+            touched <- gets _.touchedSite
+            if touched == -1 || touched /= site.id
+                then pure unit
+                else modify_ (\s -> s { sites = map (incLvl site.id) s.sites })
+            pure $ "BUILD " <> show site.id <> " TOWER"
         Nothing -> avoid
+    where
+        incLvl :: Int -> Site -> Site
+        incLvl sId site
+            | sId == site.id = site { lvl = site.lvl + 1 }
+            | otherwise = site
+    
 
 buildMines :: State GameState String
 buildMines = do
@@ -130,7 +150,7 @@ buildMines = do
     where
         incMineLvl :: Int -> Site -> Site
         incMineLvl sId site
-            | sId == site.id = site { mineLvl = site.mineLvl + 1 }
+            | sId == site.id = site { lvl = site.lvl + 1 }
             | otherwise = site
 
 avoid :: State GameState String
@@ -209,6 +229,12 @@ friendlyMines sites = filter (\s -> s.structureType == 0) $ friendlySites sites
 enemyTowers :: Array Site -> Array Site
 enemyTowers = filter isEnemy <<< filter isTower
 
+friendlyTowers :: Array Site -> Array Site
+friendlyTowers = filter isOwn <<< filter isTower
+
+friendlyTowersByLvl :: Array Site -> Array Site
+friendlyTowersByLvl sites = sortBy (\s1 s2 -> compare s1.lvl s2.lvl) (friendlyTowers sites)
+
 nearSites :: forall a. { x :: Int, y :: Int | a } -> Array Site -> Array Site
 nearSites minion sites = sortBy (compareSiteDist minion) sites
 
@@ -216,7 +242,7 @@ nearFreeSites :: forall a. { x :: Int, y :: Int | a } -> Array Site -> Array Sit
 nearFreeSites minion sites = sortBy (compareSiteDist minion) (freeSites sites)
 
 nearNonEmptyMines :: forall x. { x :: Int, y :: Int | x } -> Array Site -> Array Site
-nearNonEmptyMines minion sites = filter (\s -> s.gold > 20 && s.mineLvl < 5 && s.owner /= 1) $ nearSites minion sites
+nearNonEmptyMines minion sites = filter (\s -> s.gold > 20 && s.lvl < 5 && s.owner /= 1) $ nearSites minion sites
 
 hasKnightsBarrack :: Array Site -> Boolean
 hasKnightsBarrack sites = any (\s -> s.param2 == 0) (friendlySites sites)
