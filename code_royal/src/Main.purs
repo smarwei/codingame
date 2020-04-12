@@ -68,7 +68,9 @@ loop numSites siteInfo gameState = do
                     Just gs -> head $ filter (\s -> s.id == infoS.id) gs.sites
                     Nothing -> Nothing
             let lvl = case prevSite of
-                    Just site -> site.lvl
+                    Just pSite -> if protoS.owner /= 0
+                        then 0  -- reset level of all buildings, which are not (any longer) ours
+                        else pSite.lvl
                     Nothing -> 0
             pure { id: protoS.id
                  , gold: protoS.gold
