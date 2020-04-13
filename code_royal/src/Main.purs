@@ -3,13 +3,15 @@ module Main where
 -- mines only on side
 -- build giants
 -- Pattern match filed wei keine eigenes gebaeude
--- aber warum nur 2 minen und dann stopp?
+-- letzte Mine wird nciht aufgelevelt?
 
 import Prelude
 
 import Control.Monad.State (State, gets, modify_, runState)
 import Control.MonadZero (guard)
-import Data.Array (any, filter, foldl, head, length, reverse, sortBy)
+import Data.Array (any, filter, foldl, head, length, reverse, sort, sortBy)
+import Data.DateTime (time)
+import Data.Foldable (sum)
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Tuple (fst, snd)
 import Effect (Effect)
@@ -94,22 +96,35 @@ loop' = do
 buildAll :: State GameState String
 buildAll = do
     sites <- gets _.sites
-    units <- gets _.units
     let buildingsCnt = length $ friendlySites sites
-    let minesCnt = length $ friendlyMines sites
-    if minesCnt < 3
+    let noTowerBuildingsCnt = length $ filter (not isTower) $ friendlySites sites
+    let mines = length $ maxLvlFriendlyMines sites
+    if mines < 4    -- TODO: letzte Mine muss auch ganz ausgebaut werden
         then buildMines
-    else if buildingsCnt < 5
-        then case head $ nearFreeSites (queen units) sites of
-            Just site -> do
-                let typ = if not $ hasArcherBarrack sites then 1
-                          else if not $ hasKnightsBarrack sites then 0
-                          else 2
-                pure $ build site typ
-            Nothing -> refreshTowers
-    else if buildingsCnt < 8
-        then buildTowers
+    else if noTowerBuildingsCnt < 5
+        then buildBarracks
+    else if buildingsCnt < 8 || (minTowerRange sites) < 300
+        then if buildingsCnt < 8 then buildTowers
+        else refreshTowers
+    else if noTowerBuildingsCnt < 6
+        then buildBarracks
     else refreshTowers
+    where
+        minTowerRange sites = case head $ sort $ map (\t -> t.param2) $ filter (isTower) $ friendlySites sites of
+            Just t -> t
+            Nothing -> 0
+
+buildBarracks :: State GameState String
+buildBarracks = do
+    sites <- gets _.sites
+    units <- gets _.units
+    case head $ nearFreeSites (queen units) sites of
+        Just site -> do
+            let typ = --if not $ hasArcherBarrack sites then 1
+                      if not $ hasKnightsBarrack sites then 0
+                      else 2
+            pure $ build site typ
+        Nothing -> refreshTowers
 
 buildTowers :: State GameState String
 buildTowers = do
@@ -123,7 +138,6 @@ buildTowers = do
 refreshTowers :: State GameState String
 refreshTowers = do
     towers <-friendlyTowersByAttraction
-
     case head towers of
         Just site -> do
             touched <- gets _.touchedSite
@@ -143,6 +157,7 @@ buildMines :: State GameState String
 buildMines = do
     units <- gets _.units
     sites <- gets _.sites
+    leftSide <- gets _.leftSide
     case head $ nearNonEmptyMines (queen units) sites of
         Just site -> do
             touched <- gets _.touchedSite
@@ -180,15 +195,16 @@ trainAll = do
     sites <- gets _.sites
     units <- gets _.units
 
-    let ownArchers = ownMinions units
-    let barrack =if gold > 140
-        then
-            if length ownArchers < 4 && length (enemyKnights units) /= 0
-                then archerBarrack sites
-            else if length (enemyTowers sites) > 2
-                then giantBarrack sites
-            else
-                knightBarrack sites
+    let ownGiants = filter isGiant $ ownMinions units
+    let trainGiants = length (enemyTowers sites) > 2 && length ownGiants < 3
+    let barrack = if not trainGiants
+        then knightBarracks sites
+        else if gold > 140 then
+            --knightBarracks sites
+
+            -- if length ownArchers < 4 && length (enemyKnights units) /= 0
+            --     then archerBarrack sites
+            giantBarrack sites
         else []
     pure $ foldl siteToIds "TRAIN" barrack
     where
@@ -201,7 +217,7 @@ trainAll = do
             Nothing -> []
         giantBarrack sites = case head $ giantBarracks sites of
             Just barrack -> [barrack]
-            Nothing -> []
+            Nothing -> knightBarracks sites
 
 build :: forall e. { id :: Int | e } -> Int -> String
 build s typ = "BUILD " <> show s.id <> " BARRACKS-" <> t
@@ -230,6 +246,9 @@ friendlySites = filter (\s -> s.owner == 0)
 friendlyMines :: Array Site -> Array Site
 friendlyMines sites = filter (\s -> s.structureType == 0) $ friendlySites sites
 
+maxLvlFriendlyMines :: Array Site -> Array Site
+maxLvlFriendlyMines sites = filter (\s -> s.lvl >= s.maxMineSize) $ friendlyMines sites
+
 enemyTowers :: Array Site -> Array Site
 enemyTowers = filter isEnemy <<< filter isTower
 
@@ -246,8 +265,8 @@ friendlyTowersByAttraction = do
     sites <- gets _.sites
     units <- gets _.units
     let q = queen units
-    pure $ reverse $ sortBy (\t1 t2 -> compare (attraction t1 q) (attraction t2 q)) (friendlyTowers sites)
-    where attraction t q = t.param1 - dist t q
+    pure $ sortBy (\t1 t2 -> compare (attraction t1 q) (attraction t2 q)) (friendlyTowers sites)
+    where attraction t q = t.param1 + dist t q
 
 nearSites :: forall a. { x :: Int, y :: Int | a } -> Array Site -> Array Site
 nearSites minion sites = sortBy (compareSiteDist minion) sites
