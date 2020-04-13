@@ -32,10 +32,10 @@ type GameState =
 main :: Effect Unit
 main = do
     initInput <- parseInitInput
-    loop initInput.numSites initInput.sites Nothing
+    nextRound initInput.numSites initInput.sites Nothing
 
-loop :: Int -> Array SiteInfo -> Maybe GameState -> Effect Unit
-loop numSites siteInfo gameState = do
+nextRound :: Int -> Array SiteInfo -> Maybe GameState -> Effect Unit
+nextRound numSites siteInfo gameState = do
     input <- parseInput numSites
     error $ show input
 
@@ -53,11 +53,11 @@ loop numSites siteInfo gameState = do
             , leftSide: leftSide'
             }
 
-    let res = runState loop' gameState'
+    let res = runState loop gameState'
     let state = snd res
     let val = fst res
     log $ val
-    loop state.numSites (toSiteInfo <$> state.sites) (Just state)
+    nextRound state.numSites (toSiteInfo <$> state.sites) (Just state)
     
     where
         -- combine sites with siteInfo and old state
@@ -87,8 +87,8 @@ loop numSites siteInfo gameState = do
                  , lvl
                  }
 
-loop' :: State GameState String
-loop' = do
+loop :: State GameState String
+loop = do
     ba <- buildAll
     ta <- trainAll
     pure $ ba <> "\n" <> ta
