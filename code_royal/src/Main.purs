@@ -8,15 +8,14 @@ module Main where
 import Prelude
 
 import Control.Monad.State (State, gets, modify_, runState)
-import Control.MonadZero (guard)
-import Data.Array (any, filter, foldl, head, length, reverse, sort, sortBy)
-import Data.DateTime (time)
-import Data.Foldable (sum)
+import Control.MonadZero (empty, guard)
+import Data.Array (any, concatMap, filter, foldl, head, length, sort, sortBy, (..))
 import Data.Maybe (Maybe(..), fromJust)
 import Data.Tuple (fst, snd)
 import Effect (Effect)
 import Effect.Console (error, log)
 import GameInput (Minion, Site, SiteInfo, ProtoSite, parseInitInput, parseInput)
+import Graph as G
 import Lib (dist)
 import Partial.Unsafe (unsafePartial)
 
@@ -32,12 +31,27 @@ type GameState =
 main :: Effect Unit
 main = do
     initInput <- parseInitInput
-    nextRound initInput.numSites initInput.sites Nothing
+    --error $ show $ concatMap nodeConnections nodes
+    nextRound initInput.numSites initInput.sites Nothing G.empty
+    where
+         -- graph :: G.Graph String
+         -- graph = unsafePartial $ fromJust $ foldl G.addNode graph' [ ["[1,1]", "[2,2]"], ["[3,4]", "[4,4]"], ["[2,2]", "[4,4]"] ]
+         graph' = foldl G.addNode G.empty sNodes
+         sNodes :: Array String
+         sNodes = map (\n -> show n) nodes
+         nodes = do
+             x <- (1..4)
+             y <- (1..4)
+             pure $ [x, y]
+         nodeConnections :: Array Int -> Array (Array String)
+         nodeConnections [x, y] = [ [o, show [x-1,y]], [o, show [x+1,y]], [o, show [x,y-1]], [o, show [x,y+1]] ]
+             where o = show [x, y]
+         nodeConnections _ = []
 
-nextRound :: Int -> Array SiteInfo -> Maybe GameState -> Effect Unit
-nextRound numSites siteInfo gameState = do
+nextRound :: Int -> Array SiteInfo -> Maybe GameState -> G.Graph String -> Effect Unit
+nextRound numSites siteInfo gameState graph = do
     input <- parseInput numSites
-    error $ show input
+    -- error $ show $ G.shortestPath "[4,4]" "[1,1]" graph
 
     -- do we start on the left side of the map?
     let leftSide' = case gameState of
@@ -57,7 +71,7 @@ nextRound numSites siteInfo gameState = do
     let state = snd res
     let val = fst res
     log $ val
-    nextRound state.numSites (toSiteInfo <$> state.sites) (Just state)
+    nextRound state.numSites (toSiteInfo <$> state.sites) (Just state) graph
     
     where
         -- combine sites with siteInfo and old state

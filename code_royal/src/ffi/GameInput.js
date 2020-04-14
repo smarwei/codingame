@@ -5,7 +5,7 @@ exports.readline = readline
 exports.parseInitInput = function() {
     var sites = []
     var numSites = parseInt(readline());
-    for (let i = 0; i < numSites; i++) {
+    for (var i = 0; i < numSites; i++) {
         var inputs = readline().split(' ');
         var siteId = parseInt(inputs[0]);
         var x = parseInt(inputs[1]);
@@ -13,13 +13,14 @@ exports.parseInitInput = function() {
         var radius = parseInt(inputs[3]);
         sites.push({
             id: siteId,
-            x, y,
-            radius,
+            x: x,
+            y: y,
+            radius: radius,
         })
     }
     return {
-        numSites,
-        sites,
+        numSites: numSites,
+        sites: sites,
     }
 };
 
@@ -29,7 +30,7 @@ exports.parseInput = function(numSites) {
         var gold = parseInt(inputs[0]);
         var touchedSite = parseInt(inputs[1]); // -1 if none
         var sites = []
-        for (let i = 0; i < numSites; i++) {
+        for (var i = 0; i < numSites; i++) {
             var inputs = readline().split(' ');
             var siteId = parseInt(inputs[0]);
             var mineGold = parseInt(inputs[1]); // The total number of gold remaining to be mined from this site (-1 if unknown)
@@ -41,16 +42,16 @@ exports.parseInput = function(numSites) {
             sites.push({
                 id: siteId,
                 gold: mineGold,
-                maxMineSize,
-                structureType,
-                owner,
-                param1,
-                param2,
+                maxMineSize: maxMineSize,
+                structureType: structureType,
+                owner: owner,
+                param1: param1,
+                param2: param2,
             })
         }
         var numUnits = parseInt(readline());
         var units = []
-        for (let i = 0; i < numUnits; i++) {
+        for (var i = 0; i < numUnits; i++) {
             var inputs = readline().split(' ');
             var x = parseInt(inputs[0]);
             var y = parseInt(inputs[1]);
@@ -58,18 +59,19 @@ exports.parseInput = function(numSites) {
             var unitType = parseInt(inputs[3]); // -1 = QUEEN, 0 = KNIGHT, 1 = ARCHER
             var health = parseInt(inputs[4]);
             units.push({
-                x, y,
-                owner,
-                unitType,
-                health
+                x: x,
+                y: y,
+                owner: owner,
+                unitType: unitType,
+                health: health
             })
         }
 
         return {
-            gold,
-            touchedSite,
-            sites,
-            units,
+            gold: gold,
+            touchedSite: touchedSite,
+            sites: sites,
+            units: units
         }
     }
 };

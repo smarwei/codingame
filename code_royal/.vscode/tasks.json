@@ -6,7 +6,7 @@
         {
             "label": "build_purescript",
             "type": "shell",
-            "command": "spago bundle-app",
+            "command": "spago bundle-app && uglifyjs index.js --mangle --output index.min.js",
             "presentation": {
                 "echo": true,
                 "focus": true,
