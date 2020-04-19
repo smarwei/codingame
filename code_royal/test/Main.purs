@@ -5,36 +5,62 @@ import Prelude
 import Data.Array (concatMap, (..))
 import Data.Foldable (foldl)
 import Data.Int (fromNumber)
-import Data.JSDate (getTime, now)
-import Data.List (List)
+import Data.JSDate (JSDate, getTime, now)
 import Data.Map (Map, showTree)
 import Data.Maybe (fromJust)
 import Effect (Effect)
 import Effect.Console (log)
-import Graph (Graph(..), addEdge, addNode, empty, shortestPath, toMap, (<+>))
+import Graph (Graph(..), addEdge, addNode, dfs, empty, pathExists, shortestPath, shortestPathList, toMap, (<+>))
 import Partial.Unsafe (unsafePartial)
 
 
 main :: Effect Unit
 main = do
-    test "graph" testCreateGraph
-    let f2 = log $ show $ shortestPath graph "[1,1]" "[8,8]"
-    test "search" f2
+    let graph = foldl addEdge' graph' $ concatMap nodeConnections nodes
 
---testCreateGraph :: forall v. Effect (Map v (List v))
-testCreateGraph = pure $ toMap $ graph
-
-test :: forall a. String -> Effect a -> Effect Unit
-test tName fn = do
     d0 <- now
-    let t0 = getTime d0
-    _ <- fn
-    d1 <- now
-    log $ "execution time of " <> tName <> ": " <> (show $ unsafePartial $ fromJust $ fromNumber $ getTime d1 - t0) <> "ms"
+    -- log $ show $ shortestPathList graph "[1,1]" "[7,7]"
+    -- log $ show $ shortestPathList graph "[1,1]" "[7,7]"
+    -- log $ show $ shortestPathList graph "[1,1]" "[7,7]"
+    -- d1 <- now
+    -- test "list search" d0 d1
 
-graph :: Graph String
--- graph = foldl addEdge' graph' [ ["[1,1]", "[2,2]"], ["[3,4]", "[4,4]"], ["[2,2]", "[4,4]"] ]
-graph = foldl addEdge' graph' $ concatMap nodeConnections nodes
+    -- log ""
+
+    -- d2 <- now
+    -- log $ show $ shortestPath graph "[1,1]" "[7,7]"
+    -- log $ show $ shortestPath graph "[1,1]" "[7,7]"
+    -- log $ show $ shortestPath graph "[1,1]" "[7,7]"
+    -- d3 <- now
+    -- test "set search" d2 d3
+
+    -- log ""
+
+    -- d4 <- now
+    -- log $ show $ pathExists graph "[1,1]" "[7,7]"
+    -- log $ show $ pathExists graph "[1,1]" "[7,7]"
+    -- log $ show $ pathExists graph "[1,1]" "[7,7]"
+    -- d5 <- now
+    -- test "exists test" d4 d5
+
+    -- log ""
+
+    d6 <- now
+    log $ show $ dfs graph "[1,1]" "[1,2]"
+    log $ show $ dfs graph "[1,1]" "[1,2]"
+    log $ show $ dfs graph "[1,1]" "[1,2]"
+    d7 <- now
+    test "dfs test" d6 d7
+
+    log ""
+
+    log $ "execution time of ALL: " <> (show $ (getTime d7 - getTime d0) / 3000.0) <> "s"
+
+test :: String -> JSDate -> JSDate -> Effect Unit
+test tName d0 d1 = do
+    let t0 = getTime d0
+    let t1 = getTime d1
+    log $ "execution time of " <> tName <> ": " <> (show $ (t1 - t0) / 3000.0) <> "s"
 
 addEdge' :: forall v. Ord v => Graph v -> Array v -> Graph v
 addEdge' g v = unsafePartial $ addEdge'' v
@@ -48,8 +74,8 @@ sNodes :: Array String
 sNodes = map (\n -> show n) nodes
 
 nodes = do
-    x <- (1..360)
-    y <- (1..250)
+    x <- (1..9)
+    y <- (1..9)
     pure $ [x, y]
 
 nodeConnections :: Array Int -> Array (Array String)

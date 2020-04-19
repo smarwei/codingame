@@ -3,7 +3,7 @@ module Lib where
 import Prelude
 
 import Data.Int (fromNumber, pow, toNumber)
-import Data.Maybe (fromJust)
+import Data.Maybe (Maybe(..), fromJust)
 import Math as M
 import Partial.Unsafe (unsafePartial)
 import Range (Area(..), Pos(..), Range(..))
@@ -34,3 +34,13 @@ dist p1 p2 = sqrt $ a2 + b2
 
 toPos :: forall e. { x :: Int, y :: Int | e } -> Pos
 toPos p = Pos p.x p.y
+
+-- addNode :: forall k. Ord k => G.Graph k k -> k -> G.Graph k k
+-- addNode g v = G.insertVertex v v g
+-- infixl 5 addNode as <+>
+-- 
+-- addEdge :: forall k v. Ord k => Maybe (G.Graph k v) -> Array k -> Maybe (G.Graph k v)
+-- addEdge (Just g) [a,b] = case G.insertEdge a b g of
+--     Just g' -> Just g'
+--     Nothing -> Just g
+-- addEdge _ _ = Nothing
