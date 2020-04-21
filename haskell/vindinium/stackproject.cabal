@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 830ab1dfe911ba97d355d8cb635f3c8cb20a911f05b8cbcb68139e102b99cfd5
+-- hash: 817a86041a7dd560036682aca70efb443076dda509e4bb85d122ed1d611907a1
 
 name:           stackproject
 version:        0.1.0.0
@@ -32,6 +32,8 @@ library
       Debug
       Graph
       Player
+      Simulation.Board
+      Simulation.Data
   other-modules:
       Paths_stackproject
   hs-source-dirs:
@@ -46,7 +48,9 @@ library
     , directory
     , filepath
     , haskell-src-exts
+    , mtl
     , random
+    , vector
   default-language: Haskell2010
 
 executable stackproject-exe
@@ -66,8 +70,10 @@ executable stackproject-exe
     , directory
     , filepath
     , haskell-src-exts
+    , mtl
     , random
     , stackproject
+    , vector
   default-language: Haskell2010
 
 test-suite stackproject-test
@@ -88,6 +94,8 @@ test-suite stackproject-test
     , directory
     , filepath
     , haskell-src-exts
+    , mtl
     , random
     , stackproject
+    , vector
   default-language: Haskell2010
