@@ -29,7 +29,7 @@ bundle = do
     source <- createMonolithicSourceWithMode parseMode sourcePath
     credentials <- readCredentials "credentials.json"
 
-    putStrLn source
+    -- putStrLn source
 
     let file = "Bundled.hs" 
     writeFile file $ "{-# LANGUAGE ScopedTypeVariables, LambdaCase, MultiWayIf #-}\n" ++ source

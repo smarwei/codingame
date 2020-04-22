@@ -9,6 +9,7 @@ import Control.Monad
 import System.Random
 import Data.Char (digitToInt)
 import Data.List as L
+import qualified Data.Vector as V
 
 import BotRunner
 import Graph
@@ -32,15 +33,15 @@ bot readLine writeLine = do
     input_line <- getLine
     let size = read input_line :: Int
     
-    board' <- replicateM size getLine
+    board' <- V.replicateM size getLine
     let board :: Board = fmap (\br -> fmap (\se -> if
             | se == '.' -> Air
             | se == '#' -> Wall
             | se == 'T' -> Tavern
             | se == 'M' -> Mine 
-            | otherwise -> SpawnPoint) br) board' -- TODO: $ digitToInt se) br) board'
+            | otherwise -> SpawnPoint) $ V.fromList br) board' -- TODO: $ digitToInt se) br) board'
     input_line <- getLine
-    let iBoard :: IndexedBoard = Prelude.concatMap (\(i_r, br) -> fmap (\(i_c, bc) -> ((i_c, i_r), bc)) br) $ zip [0..9] $ map (zip [0..9]) board
+    -- let iBoard :: IndexedBoard = Prelude.concatMap (\(i_r, br) -> fmap (\(i_c, bc) -> ((i_c, i_r), bc)) br) $ V.zip [0..9] $ fmap (V.zip [0..9]) board
 
     let myId = read input_line :: Int -- ID of your hero
     
@@ -49,7 +50,7 @@ bot readLine writeLine = do
         input_line <- getLine
         let entitycount = read input_line :: Int -- the number of entities
         
-        entities <- replicateM entitycount $ do
+        entities <- V.replicateM entitycount $ do
             input_line <- getLine
             let input = words input_line
             let entitytype = input!!0 -- HERO or MINE
@@ -62,24 +63,24 @@ bot readLine writeLine = do
                 then EHero id (x,y) life gold
                 else EMine id (x,y)
 
-        let heroes = filter (\e -> case e of
+        let heroes = V.filter (\e -> case e of
                 EHero _ _ _ _ -> True
                 _ -> False) entities
-        let hero = head $ filter (\e -> case e of
+        let hero = V.head $ V.filter (\e -> case e of
                 EHero id _ _ _ -> id == myId
                 _ -> False) heroes
-        let mines = filter (\e -> case e of
-                EMine oId _ -> oId /= myId
-                _ -> False) entities
-        let minEMine = L.minimumBy (\e1 e2 -> compare (dist (posFromEntity e1) (posFromEntity hero)) (dist (posFromEntity e2) (posFromEntity hero))) mines
-        let minTavernPos = L.minimumBy (\p1 p2 -> compare (dist p1 (posFromEntity hero)) (dist p2 (posFromEntity hero))) $ map (\(p, be) -> p) $ filter (\(p, be) -> isTavern be) iBoard
+        -- let mines = V.filter (\e -> case e of
+        --         EMine oId _ -> oId /= myId
+        --         _ -> False) entities
+        -- let minEMine = L.minimumBy (\e1 e2 -> compare (dist (posFromEntity e1) (posFromEntity hero)) (dist (posFromEntity e2) (posFromEntity hero))) mines
+        -- let minTavernPos = L.minimumBy (\p1 p2 -> compare (dist p1 (posFromEntity hero)) (dist p2 (posFromEntity hero))) $ fmap (\(p, be) -> p) $ V.filter (\(p, be) -> isTavern be) iBoard
 
-        let myMines = filter (\e -> case e of
+        let myMines = V.filter (\e -> case e of
                 EMine oId _ -> oId == myId
                 _ -> False) entities
 
-        let (val, pos) = simulate board (posFromEntity hero) (gameState hero $ length myMines)
-        hPrint stderr val
+        let (val, pos) = simulate board (posFromEntity hero) (gameState hero $ fmap posFromEntity myMines)
+        hPrint stderr (val, pos)
         putStrLn $ moveToPos pos
         
         -- putStrLn $ case life hero of
@@ -106,7 +107,7 @@ posFromEntity :: Entity -> (Int, Int)
 posFromEntity (EHero _ p _ _) = p
 posFromEntity (EMine _ p) = p
 
-gameState :: Entity -> Int -> (Int, Int, Int)
+gameState :: Entity -> V.Vector Pos -> GameState
 gameState (EHero _ _ l g) mines = (g, l, mines)
 gameState (EMine _ _) mines = (-1, -1, mines)
 
@@ -114,23 +115,23 @@ isTavern :: BoardEntity -> Bool
 isTavern Tavern = True
 isTavern _ = False
 
-addEdge' :: Ord v => Graph v -> [v] -> Graph v
-addEdge' g v = addEdge'' g v
-    where
-        addEdge'' :: Ord v => Graph v -> [v] -> Graph v
-        addEdge'' g [a,b] = addEdge g a b
-
-graph' = foldl addNode empty sNodes
-
-sNodes :: [String]
-sNodes = map (\n -> show n) nodes
-
-nodes = do
-    x <- [0..9]
-    y <- [0..9]
-    return [x, y]
-
-nodeConnections :: [Int] -> [[String]]
-nodeConnections [x, y] = [ [o, show [x-1,y]], [o, show [x+1,y]], [o, show [x,y-1]], [o, show [x,y+1]] ]
-    where o = show [x, y]
-nodeConnections _ = []
+-- addEdge' :: Ord v => Graph v -> [v] -> Graph v
+-- addEdge' g v = addEdge'' g v
+--     where
+--         addEdge'' :: Ord v => Graph v -> [v] -> Graph v
+--         addEdge'' g [a,b] = addEdge g a b
+-- 
+-- graph' = foldl addNode empty sNodes
+-- 
+-- sNodes :: [String]
+-- sNodes = map (\n -> show n) nodes
+-- 
+-- nodes = do
+--     x <- [0..9]
+--     y <- [0..9]
+--     return [x, y]
+-- 
+-- nodeConnections :: [Int] -> [[String]]
+-- nodeConnections [x, y] = [ [o, show [x-1,y]], [o, show [x+1,y]], [o, show [x,y-1]], [o, show [x,y+1]] ]
+--     where o = show [x, y]
+-- nodeConnections _ = []

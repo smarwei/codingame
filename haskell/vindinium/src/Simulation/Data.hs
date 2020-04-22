@@ -1,15 +1,14 @@
 module Simulation.Data where
 
 import qualified Data.Vector as V
+import qualified Data.Sequence as S
 
-data BoardEntity = SpawnPoint | Wall | Tavern | Mine | Air deriving (Show, Eq, Enum)
-type BoardEntityEnum = Int
+data BoardEntity = SpawnPoint | Wall | Tavern | Mine | Air deriving (Show, Eq)
 
-type Board = [[BoardEntity]]
-type IndexedBoard = [(Pos, BoardEntity)]
+type Board = V.Vector (V.Vector BoardEntity)
+type IndexedBoard = V.Vector (Pos, BoardEntity)
 
-type BoardInternal = V.Vector (V.Vector BoardEntityEnum)
 type Pos = (Int, Int)
 
--- (gold, life, numMines)
-type GameState = (Int, Int, Int)
+-- (gold, life, own mines)
+type GameState = (Int, Int, V.Vector Pos)
