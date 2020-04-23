@@ -80,7 +80,7 @@ bot readLine writeLine = do
                 _ -> False) entities
 
         let (val, pos) = simulate board (posFromEntity hero) (gameState hero $ fmap posFromEntity myMines)
-        hPrint stderr (val, pos)
+        -- hPrint stderr (gameState hero $ fmap posFromEntity myMines) -- (val, pos)
         putStrLn $ moveToPos pos
         
         -- putStrLn $ case life hero of
