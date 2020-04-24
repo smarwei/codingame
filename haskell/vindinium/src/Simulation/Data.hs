@@ -10,5 +10,5 @@ type IndexedBoard = V.Vector (Pos, BoardEntity)
 
 type Pos = (Int, Int)
 
--- (gold, life, own mines)
-type GameState = (Int, Int, V.Vector Pos)
+-- (gold, life, hero pos, own mines)
+type GameState = (Int, Int, Pos, V.Vector Pos)

@@ -79,7 +79,9 @@ bot readLine writeLine = do
                 EMine oId _ -> oId == myId
                 _ -> False) entities
 
-        let (val, pos) = simulate board (posFromEntity hero) (gameState hero $ fmap posFromEntity myMines)
+        let st = (gameState hero $ fmap posFromEntity myMines)
+        hPrint stderr st
+        let (val, pos) = simulate board st
         -- hPrint stderr (gameState hero $ fmap posFromEntity myMines) -- (val, pos)
         putStrLn $ moveToPos pos
         
@@ -108,8 +110,8 @@ posFromEntity (EHero _ p _ _) = p
 posFromEntity (EMine _ p) = p
 
 gameState :: Entity -> V.Vector Pos -> GameState
-gameState (EHero _ _ l g) mines = (g, l, mines)
-gameState (EMine _ _) mines = (-1, -1, mines)
+gameState (EHero _ pos l g) mines = (g, l, pos, mines)
+gameState (EMine _ pos) mines = (-1, -1, pos, mines)
 
 isTavern :: BoardEntity -> Bool
 isTavern Tavern = True

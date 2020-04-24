@@ -21,7 +21,7 @@ loop1 pos depth acc
         in loop1 sim (depth - 1) acc'
 
 sim1 :: Pos -> (Int, Pos)
-sim1 pos = simulate board1 pos (0, 100, singleton (0,4))
+sim1 pos = simulate board1 (0, 100, pos, singleton (0,4))
 
 board1 :: Board
 board1 = fromList $ fmap fromList
