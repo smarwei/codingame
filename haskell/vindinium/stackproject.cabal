@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 817a86041a7dd560036682aca70efb443076dda509e4bb85d122ed1d611907a1
+-- hash: a40eac4da8b91ec478d65b8403d0b4c79040e0e5d0ae95d897222ea2c05cb732
 
 name:           stackproject
 version:        0.1.0.0
@@ -34,6 +34,7 @@ library
       Player
       Simulation.Board
       Simulation.Data
+      Simulation.Lib
   other-modules:
       Paths_stackproject
   hs-source-dirs:

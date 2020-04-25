@@ -14,13 +14,15 @@ import qualified Data.Vector as V
 import BotRunner
 import Graph
 import Simulation.Data
-import Simulation.Board (simulate)
+import Simulation.Lib
+import Simulation.Board
 
 
 -- Id, Pos, life, gold
 data Entity
     = EHero Int Pos Int Int 
     | EMine Int Pos
+    deriving (Show)
 
 runMain :: IO ()
 runMain = runBot True bot
@@ -41,7 +43,7 @@ bot readLine writeLine = do
             | se == 'M' -> Mine 
             | otherwise -> SpawnPoint) $ V.fromList br) board' -- TODO: $ digitToInt se) br) board'
     input_line <- getLine
-    -- let iBoard :: IndexedBoard = Prelude.concatMap (\(i_r, br) -> fmap (\(i_c, bc) -> ((i_c, i_r), bc)) br) $ V.zip [0..9] $ fmap (V.zip [0..9]) board
+    let iBoard :: IndexedBoard = V.concatMap (\(i_r, br) -> fmap (\(i_c, bc) -> ((i_c, i_r), bc)) br) $ V.zip (V.fromList [0..size]) $ fmap (V.zip $ V.fromList [0..size]) board
 
     let myId = read input_line :: Int -- ID of your hero
     
@@ -69,25 +71,33 @@ bot readLine writeLine = do
         let hero = V.head $ V.filter (\e -> case e of
                 EHero id _ _ _ -> id == myId
                 _ -> False) heroes
-        -- let mines = V.filter (\e -> case e of
-        --         EMine oId _ -> oId /= myId
-        --         _ -> False) entities
-        -- let minEMine = L.minimumBy (\e1 e2 -> compare (dist (posFromEntity e1) (posFromEntity hero)) (dist (posFromEntity e2) (posFromEntity hero))) mines
-        -- let minTavernPos = L.minimumBy (\p1 p2 -> compare (dist p1 (posFromEntity hero)) (dist p2 (posFromEntity hero))) $ fmap (\(p, be) -> p) $ V.filter (\(p, be) -> isTavern be) iBoard
+        let mines = V.filter (\e -> case e of
+                EMine oId _ -> oId /= myId
+                _ -> False) entities
+        let minEMine = L.minimumBy (\e1 e2 -> compare (dist (posFromEntity e1) (posFromEntity hero)) (dist (posFromEntity e2) (posFromEntity hero))) mines
+        let minTavernPos = L.minimumBy (\p1 p2 -> compare (dist p1 (posFromEntity hero)) (dist p2 (posFromEntity hero))) $ fmap (\(p, be) -> p) $ V.filter (\(p, be) -> isTavern be) iBoard
 
         let myMines = V.filter (\e -> case e of
                 EMine oId _ -> oId == myId
                 _ -> False) entities
 
-        let st = (gameState hero $ fmap posFromEntity myMines)
-        hPrint stderr st
-        let (val, pos) = simulate board st
-        -- hPrint stderr (gameState hero $ fmap posFromEntity myMines) -- (val, pos)
-        putStrLn $ moveToPos pos
-        
-        -- putStrLn $ case life hero of
-        --     Just lp -> if lp < 30 then moveToPos minTavernPos else moveToEntity minEMine
-        --     Nothing -> moveToEntity minEMine
+        let gs = gameState hero $ fmap posFromEntity myMines
+        let oldMines = length $ getMines gs
+        let sim = simulate board gs
+        let newMines = length $ getMines $ snd sim
+
+        let cmd = if newMines - oldMines > 0
+                then (\(_,(_,_,pos,_)) -> moveToPos pos) sim
+                else case life hero of
+                    Just lp -> if lp < 30 then moveToPos minTavernPos else moveToEntity minEMine
+                    Nothing -> moveToEntity minEMine
+
+        -- hPrint stderr $ newMines - oldMines
+        -- hPrint stderr minEMine
+        putStrLn cmd
+
+getMines :: GameState -> V.Vector Pos
+getMines (_,_,_,m) = m
 
 moveToEntity :: Entity -> String
 moveToEntity e = case e of
@@ -97,9 +107,6 @@ moveToEntity e = case e of
 
 moveToPos :: (Int, Int) -> String
 moveToPos (x, y) = "MOVE " <> (show x) <> " " <> (show y)
-
-dist :: Pos -> Pos -> Int
-dist (x1, y1) (x2, y2) = abs (x2 - x1) + abs (y2 - y1)
 
 life :: Entity -> Maybe Int
 life (EHero _ _ l _) = Just l
