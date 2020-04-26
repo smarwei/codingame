@@ -10,6 +10,7 @@ import System.Random
 import Data.Char (digitToInt)
 import Data.List as L
 import qualified Data.Vector as V
+import Data.Time.Clock.POSIX
 
 import BotRunner
 import Graph
@@ -49,6 +50,7 @@ bot readLine writeLine = do
     
     -- game loop
     forever $ do
+        t1 <- getPOSIXTime
         input_line <- getLine
         let entitycount = read input_line :: Int -- the number of entities
         
@@ -71,6 +73,9 @@ bot readLine writeLine = do
         let hero = V.head $ V.filter (\e -> case e of
                 EHero id _ _ _ -> id == myId
                 _ -> False) heroes
+        let enemies = V.filter (\e -> case e of
+                EHero id _ _ _ -> id /= myId
+                _ -> False) heroes
         let mines = V.filter (\e -> case e of
                 EMine oId _ -> oId /= myId
                 _ -> False) entities
@@ -81,23 +86,26 @@ bot readLine writeLine = do
                 EMine oId _ -> oId == myId
                 _ -> False) entities
 
-        let gs = gameState hero $ fmap posFromEntity myMines
+        let gs = gameState hero (fmap posFromEntity myMines) (fmap posFromEntity enemies)
         let oldMines = length $ getMines gs
         let sim = simulate board gs
         let newMines = length $ getMines $ snd sim
 
-        let cmd = if newMines - oldMines > 0
-                then (\(_,(_,_,pos,_)) -> moveToPos pos) sim
-                else case life hero of
-                    Just lp -> if lp < 30 then moveToPos minTavernPos else moveToEntity minEMine
-                    Nothing -> moveToEntity minEMine
+        let cmd = (\(_,(_,_,pos,_,_)) -> moveToPos pos) sim
 
-        -- hPrint stderr $ newMines - oldMines
-        -- hPrint stderr minEMine
+        -- let cmd = if newMines - oldMines > 0
+        --         then (\(_,(_,_,pos,_,_)) -> moveToPos pos) sim
+        --         else case life hero of
+        --             Just lp -> if lp < 30 then moveToPos minTavernPos else moveToEntity minEMine
+        --             Nothing -> moveToEntity minEMine
+
+        t2 <- getPOSIXTime
+        hPrint stderr $ newMines - oldMines
+        hPrint stderr $ round $ 1000 * (t2 - t1)
         putStrLn cmd
 
 getMines :: GameState -> V.Vector Pos
-getMines (_,_,_,m) = m
+getMines (_,_,_,m,_) = m
 
 moveToEntity :: Entity -> String
 moveToEntity e = case e of
@@ -116,9 +124,9 @@ posFromEntity :: Entity -> (Int, Int)
 posFromEntity (EHero _ p _ _) = p
 posFromEntity (EMine _ p) = p
 
-gameState :: Entity -> V.Vector Pos -> GameState
-gameState (EHero _ pos l g) mines = (g, l, pos, mines)
-gameState (EMine _ pos) mines = (-1, -1, pos, mines)
+gameState :: Entity -> V.Vector Pos -> V.Vector Pos -> GameState
+gameState (EHero _ pos l g) mines enemies = (g, l, pos, mines, enemies)
+gameState (EMine _ pos) mines enemies = (-1, -1, pos, mines, enemies)
 
 isTavern :: BoardEntity -> Bool
 isTavern Tavern = True

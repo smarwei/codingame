@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a40eac4da8b91ec478d65b8403d0b4c79040e0e5d0ae95d897222ea2c05cb732
+-- hash: 417e6c9b6226b7bcecca4ed2838a83b02bcb813752e3a15911e72c73db470c74
 
 name:           stackproject
 version:        0.1.0.0
@@ -51,6 +51,7 @@ library
     , haskell-src-exts
     , mtl
     , random
+    , time
     , vector
   default-language: Haskell2010
 
@@ -74,6 +75,7 @@ executable stackproject-exe
     , mtl
     , random
     , stackproject
+    , time
     , vector
   default-language: Haskell2010
 
@@ -98,5 +100,6 @@ test-suite stackproject-test
     , mtl
     , random
     , stackproject
+    , time
     , vector
   default-language: Haskell2010

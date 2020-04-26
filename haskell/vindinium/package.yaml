@@ -32,6 +32,7 @@ dependencies:
 - haskell-src-exts
 - vector
 - mtl
+- time
 
 library:
   source-dirs: src
