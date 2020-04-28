@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 417e6c9b6226b7bcecca4ed2838a83b02bcb813752e3a15911e72c73db470c74
+-- hash: 096c830a31336278e5c3292a5054113e49f2a2cb8e27884b9eb8c5aa35f34d3e
 
 name:           stackproject
 version:        0.1.0.0
@@ -30,7 +30,6 @@ library
       BotRunner
       Codingame
       Debug
-      Graph
       Player
       Simulation.Board
       Simulation.Data

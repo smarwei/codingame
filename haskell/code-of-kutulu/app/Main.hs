@@ -4,7 +4,7 @@ import System.Environment
 import Codingame
 import Simulation.Board
 import Simulation.Data
-import Data.Vector as V
+import qualified Data.Sequence as S
 
 main :: IO ()
 main = do
@@ -27,15 +27,12 @@ loop1 pos depth acc
         in loop1 sim (depth - 1) acc'
 
 sim1 :: Pos -> (Int, Pos)
-sim1 pos = (\(val, (Explorer _ pos _ _, _)) -> (val, pos)) (simulate board1 (Explorer 0 (0,0) 100 2, V.empty))
+sim1 pos = (\(val, (Explorer _ pos _ _, _)) -> (val, pos)) (simulate board1 (Explorer 0 (0,0) 100 2, S.empty))
 
 board1 :: Board
-board1 = fromList $ fmap fromList
+board1 = S.fromList $ fmap S.fromList
            [[Empty, Empty, Empty, Empty, Empty],
             [Empty, Empty, Empty, Empty, Empty],
             [Empty, Empty, Empty, Empty, Empty],
             [Empty, Empty, Empty, Empty, Empty],
             [Empty, Empty, Empty, Empty, Empty]]
-
-emptyBoard :: Board
-emptyBoard = V.generate 5 (\_ -> V.replicate 5 Empty) 

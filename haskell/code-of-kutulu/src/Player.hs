@@ -7,12 +7,12 @@ module Player
 import System.IO
 import Control.Monad
 import System.Random
+import Data.Maybe
 import Data.Char (digitToInt)
 import Data.List as L
-import qualified Data.Vector as V
+import qualified Data.Sequence as S
 
 import BotRunner
-import Graph
 import Simulation.Data
 import Simulation.Lib
 import Simulation.Board
@@ -27,11 +27,11 @@ bot readLine writeLine = do
     input_line <- getLine
     let height = read input_line :: Int
 
-    board' <- V.replicateM height getLine
+    board' <- S.replicateM height getLine
     let board :: Board = fmap (\br -> fmap (\se -> if
             | se == '.' -> Empty
             | se == '#' -> Wall
-            | otherwise -> SpawnWanderer) $ V.fromList br) board' -- TODO: $ digitToInt se) br) board'
+            | otherwise -> SpawnWanderer) $ S.fromList br) board' -- TODO: $ digitToInt se) br) board'
     
     input_line <- getLine
     let input = words input_line
@@ -45,7 +45,7 @@ bot readLine writeLine = do
         input_line <- getLine
         let entitycount = read input_line :: Int -- the first given entity corresponds to your explorer
         
-        entities <- V.replicateM entitycount $ do
+        entities <- S.replicateM entitycount $ do
             input_line <- getLine
             let input = words input_line
             let entitytype = input!!0
@@ -59,16 +59,15 @@ bot readLine writeLine = do
                 then WandererInput id (x,y) param0 param1 param2
                 else ExplorerInput id (x,y) param0 param1
         
-        let explorers' = fmap (\(ExplorerInput a b c d) -> Explorer a b c d) $ V.filter isExplorer entities
-        let wanderers = fmap (\(WandererInput a b c d e) -> Wanderer a b c d e) $ V.filter (not . isExplorer) entities
-        let hero = V.head explorers'
-        let explorers = V.tail explorers'
-
-        let cmd = if (all (> 6) $ fmap ((dist $ explorerPos hero) . wandererPos) wanderers) && explorerSanity hero `div` plansLeft hero < 100
-            then "PLAN"
-            else (\(_,(Explorer _ pos _ _, w)) -> moveToPos pos) $ simulate board (hero, wanderers)
-
-        -- hPrint stderr $ minimum $ fmap (dist $ posFromEntity hero) (fmap posFromEntity eMines)
+        let explorers' = fmap (\(ExplorerInput a b c d) -> Explorer a b c d) $ S.filter isExplorer entities
+        let wanderers = fmap (\(WandererInput a b c d e) -> Wanderer a b c d e) $ S.filter (not . isExplorer) entities
+        let explorers = S.drop 1 explorers'
+        let cmd = case S.lookup 1 explorers' of
+                    Just hero ->
+                        if (all (> 6) $ fmap ((dist $ explorerPos hero) . wandererPos) wanderers) && plansLeft hero > 0 && explorerSanity hero `div` plansLeft hero < 100
+                            then "PLAN"
+                            else (\(_,(Explorer _ pos _ _, w)) -> moveToPos pos) $ simulate board (hero, wanderers)
+                    Nothing -> "WAIT"
         putStrLn cmd
 
 moveToPos :: Pos -> String

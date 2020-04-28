@@ -5,7 +5,7 @@ import qualified Data.Sequence as S
 
 data BoardEntity = SpawnWanderer | Wall | Empty deriving (Show, Eq)
 
-type Board = V.Vector (V.Vector BoardEntity)
+type Board = S.Seq (S.Seq BoardEntity)
 
 type Pos = (Int, Int)
 
@@ -30,4 +30,4 @@ data Wanderer = Wanderer
     }
 
 -- (hero, enemies)
-type GameState = (Explorer, V.Vector Wanderer)
+type GameState = (Explorer, S.Seq Wanderer)

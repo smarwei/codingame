@@ -4,14 +4,15 @@ module Simulation.Board
     ) where
 
 -- import Prelude
-import qualified Data.Vector as V
-import Control.Monad.State as S
+import qualified Data.Sequence as S
+import Control.Monad.State as State
 import Control.Monad.State.Class
 import Data.List as L
+import Data.Maybe
 import Simulation.Data
 import Simulation.Lib
 
-searchDepth = 6
+searchDepth = 11
 
 -- TODO: Check if tailrec
 simulate :: Board -> GameState -> (Int, GameState)
@@ -25,11 +26,11 @@ simulateMove depth board state@(hero@(Explorer ownId pos sanity plans), enemies)
     | otherwise =
         let state' = evalMove board state
             -- bPos = boardPos board pos
-            moves = V.filter (posValid board state) $ possibleMoves pos
+            moves = S.filter (posValid board state) $ possibleMoves pos
             vals = fmap (\pos' -> simulateMove (depth - 1) board (updatePos pos' state')) moves
             valsWithOldPos = if depth == searchDepth
                 then vals   -- return position of submove on first level
-                else V.zip (fmap fst vals) $ fmap (updatePos pos . snd) vals  -- return starting position otherwise  -- pos'
+                else S.zip (fmap fst vals) $ fmap (updatePos pos . snd) vals  -- return starting position otherwise  -- pos'
         in L.maximumBy (\(v1, _) (v2, _) -> compare v1 v2) valsWithOldPos
 
 updatePos :: Pos -> GameState -> GameState
@@ -38,7 +39,7 @@ updatePos pos ((Explorer id _ sanity plans), enemies) = ((Explorer id pos sanity
 -- update State according to hero position on board
 -- executed every move
 evalMove :: Board -> GameState -> GameState
-evalMove board state@(hero@(Explorer id pos sanity plans), enemies) = evalDeath $ evalEnemies $ evalEffects evalSanity
+evalMove board state@(hero@(Explorer id pos sanity plans), enemies) = evalEnemies $ evalEffects evalSanity
     where
         evalSanity :: GameState
         evalSanity
@@ -60,10 +61,6 @@ evalMove board state@(hero@(Explorer id pos sanity plans), enemies) = evalDeath 
             | otherwise = state'
             where
                 distFromWanderer = fmap (dist $ pos') (fmap wandererPos enemies')
-        evalDeath :: GameState -> GameState
-        evalDeath state'@((Explorer id' pos' sanity' plans'), enemies')
-            | sanity' < 1 = ((Explorer id' pos' (-999) plans'), enemies')   -- TODO: starting position is not 0,0 but spawnpoint, enemy gets own mines
-            | otherwise = state'
 
 -- retuns the evalutaion of the current move
 -- executed if maximum depth is reached
@@ -76,18 +73,18 @@ evalGameState ((Explorer _ pos sanity plans), enemies) =
 
 -- get BoardInternalEntity Enum of Pos on BoardInternal
 boardPos :: Board -> Pos -> BoardEntity
-boardPos board (x,y) = (board V.! y) V.! x
+boardPos board (x,y) = fromJust $ (fromJust $ board S.!? y) S.!? x
 
 posValid :: Board -> GameState -> Pos -> Bool
 posValid board (hero, enemies) pos@(x,y) = onBoardInternal && boardPos' /= Wall
     where
-        width = length $ V.head board
+        width = length $ fromJust $ S.lookup 1 board
         height = length board
         boardPos' = boardPos board pos
         onBoardInternal = x >= 0 && x < width && y >= 0 && y < height
 
-possibleMoves :: Pos -> V.Vector Pos
-possibleMoves (x,y) = V.fromList [ (x+1, y), (x, y+1), (x-1, y), (x, y-1) ]
+possibleMoves :: Pos -> S.Seq Pos
+possibleMoves (x,y) = S.fromList [ (x+1, y), (x, y+1), (x-1, y), (x, y-1) ]
 
 
 data Tree v = Node v (Tree v) | Leaf v
