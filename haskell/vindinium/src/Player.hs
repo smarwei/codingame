@@ -76,22 +76,22 @@ bot readLine writeLine = do
         let enemies = V.filter (\e -> case e of
                 EHero id _ _ _ -> id /= myId
                 _ -> False) heroes
-        let mines = V.filter (\e -> case e of
+        let eMines = V.filter (\e -> case e of
                 EMine oId _ -> oId /= myId
                 _ -> False) entities
-        let minEMine = L.minimumBy (\e1 e2 -> compare (dist (posFromEntity e1) (posFromEntity hero)) (dist (posFromEntity e2) (posFromEntity hero))) mines
+        let minEMine = L.minimumBy (\e1 e2 -> compare (dist (posFromEntity e1) (posFromEntity hero)) (dist (posFromEntity e2) (posFromEntity hero))) eMines
         let minTavernPos = L.minimumBy (\p1 p2 -> compare (dist p1 (posFromEntity hero)) (dist p2 (posFromEntity hero))) $ fmap (\(p, be) -> p) $ V.filter (\(p, be) -> isTavern be) iBoard
 
         let myMines = V.filter (\e -> case e of
                 EMine oId _ -> oId == myId
                 _ -> False) entities
 
-        let gs = gameState hero (fmap posFromEntity myMines) (fmap posFromEntity enemies)
-        let oldMines = length $ getMines gs
+        let gs = gameState hero (fmap posFromEntity myMines) (fmap posFromEntity eMines) (fmap posFromEntity enemies)
+        let oldMines = length $ getOwnMines gs
         let sim = simulate board gs
-        let newMines = length $ getMines $ snd sim
+        let newMines = length $ getOwnMines $ snd sim
 
-        let cmd = (\(_,(_,_,pos,_,_)) -> moveToPos pos) sim
+        let cmd = (\(_,(_,_,pos,_,_,_)) -> moveToPos pos) sim
 
         -- let cmd = if newMines - oldMines > 0
         --         then (\(_,(_,_,pos,_,_)) -> moveToPos pos) sim
@@ -100,12 +100,13 @@ bot readLine writeLine = do
         --             Nothing -> moveToEntity minEMine
 
         t2 <- getPOSIXTime
-        hPrint stderr $ newMines - oldMines
-        hPrint stderr $ round $ 1000 * (t2 - t1)
+        -- hPrint stderr $ newMines - oldMines
+        -- hPrint stderr $ round $ 1000 * (t2 - t1)
+        hPrint stderr $ minimum $ fmap (dist $ posFromEntity hero) (fmap posFromEntity eMines)
         putStrLn cmd
 
-getMines :: GameState -> V.Vector Pos
-getMines (_,_,_,m,_) = m
+getOwnMines :: GameState -> V.Vector Pos
+getOwnMines (_,_,_,m,_,_) = m
 
 moveToEntity :: Entity -> String
 moveToEntity e = case e of
@@ -124,9 +125,9 @@ posFromEntity :: Entity -> (Int, Int)
 posFromEntity (EHero _ p _ _) = p
 posFromEntity (EMine _ p) = p
 
-gameState :: Entity -> V.Vector Pos -> V.Vector Pos -> GameState
-gameState (EHero _ pos l g) mines enemies = (g, l, pos, mines, enemies)
-gameState (EMine _ pos) mines enemies = (-1, -1, pos, mines, enemies)
+gameState :: Entity -> V.Vector Pos -> V.Vector Pos -> V.Vector Pos -> GameState
+gameState (EHero _ pos l g) oMines eMines enemies = (g, l, pos, oMines, eMines, enemies)
+gameState (EMine _ pos) oMines eMines enemies = (-1, -1, pos, oMines, eMines, enemies)
 
 isTavern :: BoardEntity -> Bool
 isTavern Tavern = True

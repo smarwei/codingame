@@ -27,15 +27,15 @@ loop1 pos depth acc
         in loop1 sim (depth - 1) acc'
 
 sim1 :: Pos -> (Int, Pos)
-sim1 pos = (\(val, (_,_, pos, _,_,_)) -> (val, pos)) (simulate board1 (0, 100, pos, singleton (0,4), singleton (3,4), empty))
+sim1 pos = (\(val, (Explorer _ pos _ _, _)) -> (val, pos)) (simulate board1 (Explorer 0 (0,0) 100 2, V.empty))
 
 board1 :: Board
 board1 = fromList $ fmap fromList
-           [[Air, Air, Air, Air, Air],
-            [Air, Air, Air, Air, Air],
-            [Air, Air, Air, Air, Air],
-            [Air, Air, Air, Air, Air],
-            [Mine,Air, Air, Mine,Air]]
+           [[Empty, Empty, Empty, Empty, Empty],
+            [Empty, Empty, Empty, Empty, Empty],
+            [Empty, Empty, Empty, Empty, Empty],
+            [Empty, Empty, Empty, Empty, Empty],
+            [Empty, Empty, Empty, Empty, Empty]]
 
 emptyBoard :: Board
-emptyBoard = V.generate 5 (\_ -> V.replicate 5 Air) 
+emptyBoard = V.generate 5 (\_ -> V.replicate 5 Empty) 

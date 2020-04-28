@@ -25,7 +25,7 @@ simulate :: Board -> GameState -> (Int, GameState)
 simulate board = simulateMove board (-1,-1) searchDepth
 
 simulateMove :: Board -> Pos -> Int -> GameState -> (Int, GameState)
-simulateMove board prevPos depth state@(_,_,pos,_,_)
+simulateMove board prevPos depth state@(_,_,pos,_,_,_)
     | depth == 0 =
         let state' = evalMove board state
         in (evalGameState state', state')
@@ -43,39 +43,42 @@ simulateMove board prevPos depth state@(_,_,pos,_,_)
         in L.maximumBy (\(v1, _) (v2, _) -> compare v1 v2) valsWithOldPos
 
 updatePos :: Pos -> GameState -> GameState
-updatePos pos (gold, life, _, mines, enemies) = (gold, life, pos, mines, enemies)
+updatePos pos (gold, life, _, oMines, eMines, enemies) = (gold, life, pos, oMines, eMines, enemies)
 
 -- update State according to hero position on board
 -- executed every move
 evalMove :: Board -> GameState -> GameState
-evalMove board state@(gold, life, pos, mines, enemies) = evalDeath $ evalEnemies evalBuildings
+evalMove board state@(gold, life, pos, oMines, eMines, enemies) = evalDeath $ evalEnemies evalBuildings
     where
         evalBuildings
-            | entity == Air = (gold + length mines, thirst life, pos, mines, enemies)
-            | entity == SpawnPoint = (gold + length mines, thirst life, pos, mines, enemies)
+            | entity == Air = (gold + length oMines, thirst life, pos, oMines, eMines, enemies)
+            | entity == SpawnPoint = (gold + length oMines, thirst life, pos, oMines, eMines, enemies)
             | entity == Tavern =
                 if gold >= 2 then
-                   ( gold + length mines - 2
+                   ( gold + length oMines - 2
                    , min 100 (life + 50)    -- TODO: Check if life is +19
                    , pos
-                   , mines
+                   , oMines
+                   , eMines
                    , enemies
                    )
                 else 
-                   ( gold + length mines
+                   ( gold + length oMines
                    , thirst life
                    , pos
-                   , mines
+                   , oMines
+                   , eMines
                    , enemies
                    )
             | entity == Mine =
-                let addMine = pos `V.notElem` mines
-                    mines' = if addMine then V.cons pos mines else mines
+                let addMine = pos `V.notElem` oMines
+                    oMines' = if addMine then V.cons pos oMines else oMines
                 in
-                    ( gold + length mines'
+                    ( gold + length oMines'
                     , if addMine then thirst life - 20 else thirst life
                     , pos
-                    , mines'
+                    , oMines'
+                    , eMines
                     , enemies
                     )
             | entity == Wall = state -- should never happen
@@ -83,11 +86,11 @@ evalMove board state@(gold, life, pos, mines, enemies) = evalDeath $ evalEnemies
                 entity = boardPos board pos
         -- TODO: Gegner verliert auch Leben
         evalEnemies :: GameState -> GameState
-        evalEnemies state'@(gold', life', pos', mines', enemies')
-            | any (<2) $ fmap (dist pos') enemies' = (gold', life' - 20, pos', mines', enemies')
+        evalEnemies state'@(gold', life', pos', oMines', eMines', enemies')
+            | any (<3) $ fmap (dist pos') enemies' = (gold', life' - 20, pos', oMines', eMines', enemies')
             | otherwise = state'
-        evalDeath state'@(gold', life', pos', mines', enemies')
-            | life' < 5 = (gold', 100, (0,0), V.empty, enemies')   -- TODO: starting position is not 0,0 but spawnpoint
+        evalDeath state'@(gold', life', pos', oMines', eMines', enemies')
+            | life' < 5 = (gold', 100, (0,0), V.empty, eMines', enemies')   -- TODO: starting position is not 0,0 but spawnpoint, enemy gets own mines
             | otherwise = state'
 
 thirst life = max 1 (life - 1)
@@ -95,14 +98,20 @@ thirst life = max 1 (life - 1)
 -- retuns the evalutaion of the current move
 -- executed if maximum depth is reached
 evalGameState :: GameState -> Int
-evalGameState (gold, life, _, mines, _) = gold + (life `div` 10) + length mines * 2  -- TODO: Warum macht nur mines quatsch?
+evalGameState (gold, life, hero, oMines, eMines, _) = -- TODO: Warum macht nur mines quatsch?
+    gold
+    + (life `div` 10)
+    + length oMines
+    - minMineDist
+    where
+        minMineDist = minimum $ fmap (dist hero) eMines
 
 -- get BoardInternalEntity Enum of Pos on BoardInternal
 boardPos :: Board -> Pos -> BoardEntity
 boardPos board (x,y) = (board V.! y) V.! x
 
 posValid :: Board -> GameState -> Pos -> Bool
-posValid board (_, _, _, mines, _) pos@(x,y) = onBoardInternal && boardPos' /= Wall && pos `notElem` mines
+posValid board (_,_,_,mines,_,_) pos@(x,y) = onBoardInternal && boardPos' /= Wall && pos `notElem` mines
     where
         size = length board
         boardPos' = boardPos board pos
