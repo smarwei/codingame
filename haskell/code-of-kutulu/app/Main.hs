@@ -9,7 +9,7 @@ import qualified Data.Sequence as S
 main :: IO ()
 main = do
     bundle
-    print $ sim1 (2,4)
+    -- print $ sim1 (2,4)
     --test
 
 test :: IO ()
@@ -26,7 +26,7 @@ loop1 pos depth acc
             acc' = sim : acc
         in loop1 sim (depth - 1) acc'
 
-sim1 :: Pos -> (Int, Pos)
+sim1 :: Pos -> (Float, Pos)
 sim1 pos = (\(val, (Explorer _ pos _ _, _)) -> (val, pos)) (simulate board1 (Explorer 0 (0,0) 100 2, S.empty))
 
 board1 :: Board

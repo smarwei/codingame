@@ -15,10 +15,10 @@ import Simulation.Lib
 searchDepth = 11
 
 -- TODO: Check if tailrec
-simulate :: Board -> GameState -> (Int, GameState)
+simulate :: Board -> GameState -> (Float, GameState)
 simulate = simulateMove searchDepth
 
-simulateMove :: Int -> Board -> GameState -> (Int, GameState)
+simulateMove :: Int -> Board -> GameState -> (Float, GameState)
 simulateMove depth board state@(hero@(Explorer ownId pos sanity plans), enemies)
     | depth == 0 =
         let state' = evalMove board state
@@ -43,8 +43,8 @@ evalMove board state@(hero@(Explorer id pos sanity plans), enemies) = evalEnemie
     where
         evalSanity :: GameState
         evalSanity
-            | any (< 3) $ fmap (dist pos) (fmap wandererPos enemies) = (Explorer id pos (sanity - 1) plans, enemies)
-            | otherwise = (Explorer id pos (sanity - 3) plans, enemies)
+            | any (< 3) $ fmap (dist pos) (fmap wandererPos enemies) = (Explorer id pos (sanity - 2) plans, enemies)
+            | otherwise = (Explorer id pos (sanity - 4.5) plans, enemies)
         evalEffects :: GameState -> GameState
         evalEffects state'@(hero'@(Explorer id' pos' sanity' plans'), enemies')
             | entity == Empty = (hero', enemies')
@@ -64,7 +64,7 @@ evalMove board state@(hero@(Explorer id pos sanity plans), enemies) = evalEnemie
 
 -- retuns the evalutaion of the current move
 -- executed if maximum depth is reached
-evalGameState :: GameState -> Int
+evalGameState :: GameState -> Float
 evalGameState ((Explorer _ pos sanity plans), enemies) =
     sanity
     -- enemyDist

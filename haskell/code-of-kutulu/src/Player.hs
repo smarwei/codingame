@@ -57,16 +57,16 @@ bot readLine writeLine = do
             let param2 = read (input!!6) :: Int
             pure $ if entitytype == "WANDERER"
                 then WandererInput id (x,y) param0 param1 param2
-                else ExplorerInput id (x,y) param0 param1
+                else ExplorerInput id (x,y) (fromIntegral param0) param1
         
         let explorers' = fmap (\(ExplorerInput a b c d) -> Explorer a b c d) $ S.filter isExplorer entities
         let wanderers = fmap (\(WandererInput a b c d e) -> Wanderer a b c d e) $ S.filter (not . isExplorer) entities
         let explorers = S.drop 1 explorers'
         let cmd = case S.lookup 1 explorers' of
                     Just hero ->
-                        if (all (> 6) $ fmap ((dist $ explorerPos hero) . wandererPos) wanderers) && plansLeft hero > 0 && explorerSanity hero `div` plansLeft hero < 100
+                        if (all (> 6) $ fmap ((dist $ explorerPos hero) . wandererPos) wanderers) && plansLeft hero > 0 && explorerSanity hero / (fromIntegral $ plansLeft hero) < 100
                             then "PLAN"
-                            else (\(_,(Explorer _ pos _ _, w)) -> moveToPos pos) $ simulate board (hero, wanderers)
+                            else (\(_,(Explorer _ pos _ _, _)) -> moveToPos pos) $ simulate board (hero, wanderers)
                     Nothing -> "WAIT"
         putStrLn cmd
 

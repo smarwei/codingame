@@ -10,14 +10,14 @@ type Board = S.Seq (S.Seq BoardEntity)
 type Pos = (Int, Int)
 
 data EntityInput
-    = ExplorerInput Int Pos Int Int
+    = ExplorerInput Int Pos Float Int
     | WandererInput Int Pos Int Int Int
     deriving (Show)
 
 data Explorer = Explorer
     { explorerId :: Int
     , explorerPos :: Pos
-    , explorerSanity :: Int
+    , explorerSanity :: Float
     , plansLeft :: Int
     }
 
